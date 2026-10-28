@@ -1047,9 +1047,13 @@ def _to_export_string(value) -> str:
 
 
 def _excel_safe(value):
-    """Prevent user supplied text from being interpreted as an Excel formula."""
-    if isinstance(value, str) and (value.startswith(("\t", "\r", "\n")) or value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@"))):
-        return "'" + value
+    """Make user supplied values valid and inert in an Excel worksheet cell."""
+    if isinstance(value, str):
+        # XML 1.0 (used by XLSX) forbids these control characters. Resume text
+        # is user supplied and can contain them even when it looks normal in logs.
+        value = "".join(char for char in value if char in "\t\n\r" or ord(char) >= 0x20)
+        if value.startswith(("\t", "\r", "\n")) or value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
+            return "'" + value
     return value
 
 
@@ -1072,10 +1076,12 @@ def _export_candidate_fields(candidate) -> dict:
 
 
 def _add_resume_link(cell, candidate: Candidate) -> None:
-    """Link to the frontend's protected resume viewer, which uses the user's session."""
+    """Link to the protected resume viewer without requiring a server deep-link rewrite."""
     cell.value = "View resume"
-    frontend_url = (settings.frontend_base_url or next(iter(settings.allowed_origins), "http://localhost:5173")).rstrip("/")
-    cell.hyperlink = f"{frontend_url}/dashboard/resume/{candidate.id}"
+    # The repository's Vite configuration defaults to port 8443. CORS's first
+    # default origin is 5173, but that is not the app's default serving port.
+    frontend_url = (settings.frontend_base_url or "http://localhost:8443").rstrip("/")
+    cell.hyperlink = f"{frontend_url}/?resume={candidate.id}"
     cell.style = "Hyperlink"
 
 

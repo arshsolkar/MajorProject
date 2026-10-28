@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BriefcaseBusiness, Building2, ClipboardCheck, FileSearch, MapPin, Pencil, Plus, Trash2, UserCircle, Users, X } from 'lucide-react'
 import Sidebar, { type SidebarTab } from './components/Sidebar'
 import TopBar from './components/TopBar'
@@ -750,6 +750,11 @@ function ProfileRow({ icon: Icon, label, value }: { icon: any; label: string; va
 }
 
 export default function App() {
+  const [searchParams] = useSearchParams()
+  const resumeCandidateId = searchParams.get('resume')
+
+  if (resumeCandidateId) return <ResumeAccessPage candidateIdOverride={resumeCandidateId} />
+
   return (
     <Routes>
       <Route path="/dashboard/resume/:candidateId" element={<ResumeAccessPage />} />
@@ -759,8 +764,9 @@ export default function App() {
   )
 }
 
-function ResumeAccessPage() {
-  const { candidateId } = useParams()
+function ResumeAccessPage({ candidateIdOverride }: { candidateIdOverride?: string } = {}) {
+  const { candidateId: routeCandidateId } = useParams()
+  const candidateId = candidateIdOverride || routeCandidateId
   const navigate = useNavigate()
   const { user, isInitializing } = useAuth() as { user?: { id: string } | null; isInitializing?: boolean }
   const [resumeUrl, setResumeUrl] = useState<string | null>(null)
